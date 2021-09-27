@@ -79,6 +79,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     for fn in [os.path.join(args.source_dir, fn) for fn in next(os.walk(args.source_dir))[2]]:
+        print(f"Generating transpositions for {fn}")
 
         fn_parts = os.path.basename(fn).split("_")
         key = fn_parts[1]
