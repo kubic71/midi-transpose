@@ -109,13 +109,13 @@ if __name__ == "__main__":
     Label(window, text="Destination directory").grid(row=1)
     Label(window, text="Pitch offset").grid(row=2)
 
-    e1 = Entry(window)
-    e2 = Entry(window)
+    e1 = Entry(window, width=65)
+    e2 = Entry(window, width=65)
     e3 = Entry(window)
 
     e1.grid(row=0, column=1)
     e2.grid(row=1, column=1)
-    e3.grid(row=2, column=1)
+    e3.grid(row=2, column=1, sticky=NW)
     e3.insert(0, "0")
 
     def select_inp_dir():
