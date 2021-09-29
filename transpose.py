@@ -58,30 +58,20 @@ def string_key_to_offset(key: str):
     return offset
 
 
+def batch_transpose(source_dir, dest_dir, pitch_offset):
 
-if __name__ == "__main__":
-    import argparse
+    for fn in [os.path.join(source_dir, fn) for fn in next(os.walk(source_dir))[2]]:
+        if not (fn.lower().endswith(".midi") or fn.lower().endswith(".mid")):
+            print(f"skipping {fn}")
+            continue
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--source-dir",
-        type=str,
-        required=True,
-        help="Source directory with all the MIDI files to be transposed",
-    )
-    parser.add_argument(
-        "--dest-dir",
-        type=str,
-        required=True,
-        help="Destination directory for the transposed MIDI files.",
-    )
-
-    args = parser.parse_args()
-
-    for fn in [os.path.join(args.source_dir, fn) for fn in next(os.walk(args.source_dir))[2]]:
         print(f"Generating transpositions for {fn}")
 
         fn_parts = os.path.basename(fn).split("_")
+
+        # normalize the style-part of the filename
+        fn_parts[0] = fn_parts[0].lower().capitalize()
+
         key = fn_parts[1]
 
         minor = False
@@ -92,9 +82,72 @@ if __name__ == "__main__":
         
         key_int = string_key_to_offset(key)
 
-        for target_key in range(12):
-            target_key_str = reverse_key_map[target_key] + ("m" if minor else "")
-            target_fn = fn_parts[0] + "_" + target_key_str + "_".join(fn_parts[2:])
-            transpose_semitones = target_key - key_int
+        for target_offset in range(-6, 6):
+            target_offset += pitch_offset
+            target_scale = (key_int + target_offset) % 12
+            target_key_str = reverse_key_map[target_scale] + ("m" if minor else "")
 
-            transpose_file(fn, os.path.join(args.dest_dir, reverse_key_map[target_key], target_fn), transpose_semitones)
+
+            target_fn = fn_parts[0] + "_" + target_key_str + "_" + "_".join(fn_parts[2:])
+            target_dir = fn_parts[0] + "_" + target_key_str
+
+            transpose_file(fn, os.path.join(dest_dir, target_dir, target_fn), target_offset)
+
+    print("Done!")
+
+
+if __name__ == "__main__":
+    from tkinter import *
+    from threading import *
+    from tkinter import filedialog
+    import functools
+
+    window = Tk()
+    window.title("Batch-transpose MIDI")
+    # window.geometry('350x200')
+    Label(window, text="Source directory").grid(row=0)
+    Label(window, text="Destination directory").grid(row=1)
+    Label(window, text="Pitch offset").grid(row=2)
+
+    e1 = Entry(window)
+    e2 = Entry(window)
+    e3 = Entry(window)
+
+    e1.grid(row=0, column=1)
+    e2.grid(row=1, column=1)
+    e3.grid(row=2, column=1)
+    e3.insert(0, "0")
+
+    def select_inp_dir():
+        path = filedialog.askdirectory()
+        e1.delete(0, END)
+        e1.insert(0, path)
+
+    def select_output_dir():
+        path = filedialog.askdirectory()
+        e2.delete(0, END)
+        e2.insert(0, path)
+
+    btn1 = Button(window, text="Select", command=select_inp_dir)
+    btn2 = Button(window, text="Select", command=select_output_dir)
+    btn1.grid(row=0, column=2)
+    btn2.grid(row=1, column=2)
+
+    def generate_after():
+        sd = e1.get()
+        dd = e2.get()
+        ofs = int(e3.get())
+        print("Source dir:", sd)
+        print("Destination dir:", dd)
+        print("Pitch offset:", ofs)
+
+        # Call work function
+        t1 = Thread(target=functools.partial(batch_transpose, source_dir=sd, dest_dir=dd, pitch_offset=ofs))
+    
+        t1.start()
+
+        
+    generate_btn = Button(window, text="Generate", command=generate_after)
+    generate_btn.grid(row=3, column=0)
+
+    window.mainloop()
